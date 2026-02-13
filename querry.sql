@@ -477,6 +477,7 @@ SELECT * FROM jikwon;
 UPDATE jikwon SET jikwonpay=NULL WHERE jikwonno = 5;
 SELECT * FROM jikwon;
 DESC jikwon;
+
 --     null제외하고진행, NULL을 0으로 바꿔서 작업시킴
 SELECT AVG(jikwonpay), AVG(nvl(jikwonpay,0)) FROM jikwon; -- NULL은 작업에서 제외하고 처리
 SELECT SUM(jikwonpay) / 29, SUM(jikwonpay) / 30 FROM jikwon;
@@ -489,6 +490,309 @@ SELECT COUNT(*) AS 인원수 FROM jikwon; -- NULL찾기 귀찮을 때 사용
 SELECT COUNT(*) AS 인원,VAR_SAMP(jikwonpay) as 분산 FROM jikwon WHERE busernum = 10; 
 SELECT COUNT(*) AS 인원,VAR_SAMP(jikwonpay) as 분산 FROM jikwon WHERE busernum = 20;
 
+-- 과장은 몇명?
+SELECT COUNT(*) AS 인원수 FROM jikwon WHERE jikwonjik='과장';
+
+-- 2010년 이전에 입사한 남직원은?
+SELECT COUNT(*) 인원수 FROM jikwon WHERE jikwonibsail < '2010-01-01'  AND jikwongen = '남';
+
+-- 2015년 이후 입사한 여직원의 연봉합, 연봉평균, 인원수는?
+SELECT SUM(jikwonpay) AS 연봉합, AVG(jikwonpay) AS 연봉평균, COUNT(*) 인원수 
+FROM jikwon WHERE jikwonibsail > '2015-01-01' AND jikwongen = '여';
 
 
+-- 그룹함수 : group by 절 = 소계 출력
+-- select 그룹칼럼명, 계산함수,...from 테이블명 where 조건 group by 그룹칼럼명 having 조건
+-- 그룹칼럼에 대해 order by 할 수 없다. 단, 출력 결과는 order by 가능
+
+-- 성별, 연봉 평균, 인원수를 출력
+SELECT AVG(jikwonpay),COUNT(*) FROM jikwon GROUP BY jikwongen;
+
+-- 부서별 연봉합
+SELECT busernum, SUM(jikwonpay) FROM  jikwon GROUP BY busernum;
+
+-- 부서별 연봉합 : 연봉합이 35000 이상
+SELECT busernum, SUM(jikwonpay) FROM jikwon 
+GROUP BY busernum HAVING SUM(jikwonpay) >= 35000;
+
+-- 부서별 연봉합 : 여성만
+SELECT busernum, SUM(jikwonpay) FROM  jikwon WHERE jikwongen = '여' GROUP BY busernum ;
+
+-- 부서별 연봉합 : 여성만15000 이상
+SELECT busernum, SUM(jikwonpay) FROM jikwon WHERE jikwongen = '여'
+GROUP BY busernum HAVING SUM(jikwonpay) >= 15000;
+
+SELECT busernum, SUM(jikwonpay) AS Kpay FROM jikwon WHERE jikwongen = '여'
+GROUP BY busernum HAVING SUM(jikwonpay) >= 15000;
+
+-- 주의
+SELECT busernum, SUM(jikwonpay) FROM jikwon order by busernum GROUP BY busernum; -- group by 전에 order by 금지 
+
+SELECT busernum, SUM(jikwonpay) FROM jikwon GROUP BY busernum ORDER BY SUM(jikwonpay) DESC;
+
+# group by 연습
+# 문제1 : 직급별 급여의 평균 (NULL 직급 제외)
+SELECT jikwonjik AS 직급, SUM(jikwonpay) AS 급여합, AVG(jikwonpay) AS 급여평균
+FROM jikwon -- where jikwonjik is not null 도 ㄱㅊㄱㅊ
+GROUP BY jikwonjik HAVING jikwonjik IS NOT NULL;
+
+# 문제2 : 부장, 과장에 대해 직급별 급여의 총합
+SELECT jikwonjik AS 직급, SUM(jikwonpay) AS 급여합 FROM jikwon 
+WHERE jikwonjik IN ('부장',  '과장') -- jikwonjik = '부장' or jikwonjik = '과장' 도 ㄱㅊㄱㅊ
+GROUP BY jikwonjik;
+
+# 문제3 : 2015년 이전에 입사한 자료 중 년도별 직원 수 출력
+SELECT COUNT(*) AS 직원수, DATE_FORMAT(jikwonibsail, '%Y') AS 2015년이전 FROM jikwon 
+WHERE jikwonibsail <= '2014-12-31'
+GROUP BY DATE_FORMAT(jikwonibsail, '%Y');
+
+# 문제4 : 직급별 성별 인원수, 급여합 출력 (NULL인 직급은 임시직으로 표현)
+SELECT nvl(jikwonjik, '임시직') AS 직급, jikwongen AS 성별, 
+SUM(jikwonpay) AS 급여합, COUNT(*) AS 인원수 FROM jikwon
+GROUP BY nvl(jikwonjik, '임시직'), jikwongen;
+
+# 문제5 : 부서번호 10, 20 에대한 부서별 급여 합 출력
+SELECT busernum AS 부서번호, SUM(jikwonpay) AS 급여합 FROM jikwon
+WHERE busernum IN (10, 20)
+GROUP BY busernum; 
+
+# 문제6 : 급여의 총합이 7000 이상인 직급 출력(NULL인 직급은 임시직으로 표현)
+SELECT  nvl(jikwonjik, '임시직') AS 직급, SUM(jikwonpay) AS 급여합 
+FROM jikwon GROUP BY nvl(jikwonjik, '임시직') 
+HAVING SUM(jikwonpay) >= 7000;
+
+# 문제7 : 직급별 인원수, 급여합계를 구하되 인원수가 3명 이상인 직급만 출력(NULL인 직급은 임시직으로 표현)
+SELECT nvl(jikwonjik,'임시직') AS 직급, COUNT(*) AS 인원수, SUM(jikwonpay) AS 급여합 
+FROM jikwon GROUP BY jikwonjik 
+HAVING COUNT(*) >= 3;
+
+
+-- join !!! : 하나 이상의 테이블에서 원하는 자료 추출
+-- 반드시 공통 칼럼이 필요.
+-- 정형, 비정형, 반정형 데이터 알아두자
+DESC buser;
+DESC jikwon;
+DESC gogek;
+
+INSERT INTO buser(buserno, busername) VALUES(50, '기획실'); 
+SELECT * FROM buser;
+
+ALTER table jikwon MODIFY busernum  INT NULL;
+UPDATE jikwon SET busernum = NULL WHERE jikwonno = 5;
+SELECT * FROM jikwon;
+
+SELECT test.jikwon.jikwonname FROM jikwon;
+SELECT mytab.jikwonname FROM jikwon AS mytab;
+
+-- cross join :  한 쪽 테이블의 모든 행과 다른 쪽 테이블의 모든 행을 조인하는 기능
+SELECT jikwonname, busername FROM jikwon, buser;
+SELECT jikwonname, busername FROM jikwon CROSS join buser; -- ANSI
+
+-- cross join 중 self join
+SELECT a.jikwonname, b.jikwonname FROM jikwon a, jikwon b;
+
+-- EQUI join : 조인 조건식에 '=' 를 사용, 두 테이블은 '같다' 조건으로 join
+-- 대부분의 pk, fk 조인은 EQUI join이다.
+SELECT jikwonname, busername FROM jikwon, buser
+WHERE jikwon.busernum = buser.buserno;
+
+-- non-EQUI join : 조인 조건식에 '=' 이외의 관계연산자를 사용
+CREATE TABLE paygrade(grade INT PRIMARY KEY, lpay INT, hpay INT);
+INSERT INTO paygrade VALUES(1, 0, 1999);
+INSERT INTO paygrade VALUES(2, 2000, 2999);
+INSERT INTO paygrade VALUES(3, 3000, 3999);
+INSERT INTO paygrade VALUES(4, 4000, 4999);
+INSERT INTO paygrade VALUES(5, 5000, 9999);
+SELECT * FROM paygrade;
+
+SELECT jiktab.jikwonname, jiktab.jikwonpay, paytab.grade
+FROM jikwon AS jiktab, paygrade AS paytab
+WHERE jiktab.jikwonpay >= paytab.lpay AND jiktab.jikwonpay <= paytab.hpay;
+
+-- inner join : 두 테이블을 조인할 때, 두 테이블에 모두 지정한 열의 데이터가 있는 경우만 추출
+SELECT jikwonno, jikwonname,busername FROM jikwon, buser
+WHERE busernum = buserno;  -- oracle에서 주로 사용
+
+SELECT jtab.jikwonno, jtab.jikwonname, btab.busername FROM jikwon AS jtab, buser AS btab
+WHERE jtab.busernum = btab.buserno;
+
+SELECT jikwonno, jikwonname,busername FROM jikwon, buser
+WHERE busernum = buserno AND jikwongen = '남'; 
+# where 조건에 join 조건 + record 제한 조건 == 가독성 나쁨
+
+
+SELECT jikwonno, jikwonname,busername FROM jikwon INNER JOIN buser 
+ON busernum = buserno WHERE jikwongen = '남';  -- ANSI
+
+
+-- outer join : 두 테이블을 조인할 때 1개의 테이블에만 자료가 있어도 결과 추출
+-- left outer join
+SELECT jikwonno, jikwonname, busername FROM jikwon, buser
+WHERE busernum = buserno(+); -- err : oracle 전용
+
+-- right outer join
+SELECT jikwonno, jikwonname, busername FROM jikwon, buser
+WHERE busernum(+) = buserno; -- err : oracle 전용
+
+-- full outer join
+SELECT jikwonno, jikwonname, busername
+FROM jikwon FULL OUTER JOIN buser
+ON busernum = buserno; -- err : oracle 전용
+
+-- left outer join
+SELECT jikwonno, jikwonname, busername
+FROM jikwon LEFT OUTER JOIN buser
+ON busernum = buserno;
+
+-- right outer join
+SELECT jikwonno, jikwonname, busername
+FROM jikwon RIGHT OUTER JOIN buser
+ON busernum = buserno;
+
+-- full outer join
+SELECT jikwonno, jikwonname, busername
+FROM jikwon LEFT OUTER JOIN buser
+ON busernum = buserno
+UNION -- <== FULL OUTER JOIN
+SELECT jikwonno, jikwonname, busername
+FROM jikwon RIGHT OUTER JOIN buser
+ON busernum = buserno; 
+
+
+SELECT jikwonno AS 직원번호, jikwonname AS 직원명,busername AS 부서명 
+FROM jikwon INNER JOIN  buser ON busernum = buserno
+WHERE jikwongen = '남' AND jikwonname LIKE '김%';
+
+SELECT SUM(jikwonpay) AS hap, COUNT(*) AS coun
+FROM jikwon INNER JOIN buser ON busernum = buserno
+WHERE jikwongen = '남';  
+
+SELECT * FROM gogek;  -- buser TABLE과는 JOIN 불가 (공통 칼럼 X)
+
+# JOIN 연습1
+# 문제 1 : 직급이 '사원'인 직원이 관리하는 고객자료 출력
+SELECT jikwonno AS 사번, jikwonname AS 직원명, jikwonjik AS 직급,
+gogekname AS 고객명, gogektel AS 고객전화,
+case
+when SUBSTR(gogekjumin,8,1) IN ('1', '3') then '남'
+when SUBSTR(gogekjumin,8,1) IN ('2', '4') then '여'
+ELSE "사람아님" END AS 고객성별
+FROM jikwon INNER JOIN gogek ON jikwonno = gogekdamsano
+WHERE jikwonjik = '사원';
+
+# 문제 2 : 직원별 고객 확보 수 <== group by 사용
+SELECT jikwonno AS 사번, jikwonname AS 직원이름, jikwonjik AS 직급,
+gogekname AS 고객명, COUNT(gogekname) AS 고객확보
+FROM jikwon LEFT OUTER JOIN gogek ON jikwonno = gogekdamsano
+GROUP BY jikwonno;
+
+# 문제 3 : 고객이 담당직원의 자료를 보고 싶을 때 즉, 고객명을 입력하면, 담당직원 자료 출력
+SELECT jikwonname AS 직원명, jikwonjik AS 직급 
+FROM jikwon INNER JOIN gogek 
+ON jikwonno = gogekdamsano
+WHERE gogekname = '강나루';
+
+# 문제 4 : 직원명을 입력하면 관리고객 자료 출력
+SELECT gogekname AS 고객명, gogektel AS 고객전화, gogekjumin AS 주민번호,
+(YEAR(SYSDATE()) - (1900 + LEFT(gogekjumin, 2)) + 1) AS 나이
+FROM gogek INNER JOIN jikwon ON gogekdamsano = jikwonno
+WHERE jikwonname = '이순신';
+
+-- 세 개의 테이블 조인 : 두 개를 먼저 조인 후 그 결과와 나머지 테이블로 조인
+SELECT jikwonname, busername, gogekname FROM jikwon, buser, gogek
+WHERE busernum = buserno AND jikwonno = gogekdamsano;
+
+SELECT jikwonname,busername,gogekname FROM jikwon
+INNER JOIN buser ON busernum = buserno
+INNER JOIN gogek ON jikwonno = gogekdamsano;
+
+# JOIN 연습2
+-- 문제 1 : 총무부에서 관리하는 고객수 출력 (고객 30살 이상만 작업에 참여)
+SELECT busername AS 부서, COUNT(*) AS 고객수 
+FROM jikwon
+INNER JOIN buser ON busernum = buserno
+INNER JOIN gogek ON jikwonno = gogekdamsano
+WHERE busername = '총무부'  AND (YEAR(SYSDATE()) - (1900 + LEFT(gogekjumin, 2)) + 1) >= 30
+GROUP BY busername;
+
+-- 문제 2 : 부서명별 고객 인원수 (부서가 없으면 "무소속")
+SELECT busername AS 부서, COUNT(gogekno) AS 고객수 FROM jikwon
+LEFT JOIN buser ON busernum = buserno
+INNER JOIN gogek ON jikwonno = gogekdamsano
+GROUP BY buserno;
+
+-- 문제 3 : 고객이 담당직원의 자료를 보고 싶을 때 즉, 고객명을 입력하면 담당직원 자료 출력
+SELECT jikwonname AS 직원명, jikwonjik AS 직급, busername AS 부서명, 
+busertel AS 부서전화, jikwongen AS 성별 FROM jikwon
+INNER JOIN buser ON busernum = buserno
+INNER JOIN gogek ON jikwonno = gogekdamsano
+WHERE gogekname = '강나루';
+
+-- mod(m,n)
+-- 문제 4 : 부서와 직원명을 입력하면 관리고객 자료 출력
+SELECT gogekname AS 고객명, gogektel AS 고객전화,
+case
+when SUBSTR(gogekjumin,8,1) IN ('1', '3') then '남'
+when SUBSTR(gogekjumin,8,1) IN ('2', '4') then '여'
+ELSE '사람아님'  END AS 성별
+FROM jikwon
+INNER JOIN buser ON busernum = buserno
+INNER JOIN gogek ON jikwonno = gogekdamsano
+WHERE busername = '영업부' AND jikwonname = '이순신';
+
+
+-- union : """""구조가 일치""""하는 두 개 이상의 테이블 자료 합쳐 출력. 원래의 테이블 계속 유지
+CREATE TABLE pum1(bun INT, pummok VARCHAR(20));
+INSERT INTO pum1 VALUES(1, '귤');
+INSERT INTO pum1 VALUES(2, '사과');
+INSERT INTO pum1 VALUES(3, '바나나');
+SELECT * FROM pum1;
+
+CREATE TABLE pum2(num INT, sangpum VARCHAR(20));
+INSERT INTO pum2 VALUES(10, '딸기');
+INSERT INTO pum2 VALUES(20, '메론');
+INSERT INTO pum2 VALUES(30, '수박');
+INSERT INTO pum2 VALUES(30, '망고');
+SELECT * FROM pum2;
+
+SELECT bun AS 번호, pummok AS 과일 FROM pum1
+UNION
+SELECT num, sangpum FROM pum2;
+
+-- subquery : query 내에 query 가 있는 형태 (주로 안쪽 질의 결과를 바깥쪽 질의에서 참조)
+-- 다른 테이블의 결과를 조건으로 쓰고 싶을 때
+-- 계산된 값을 이용하고 싶을 때
+-- 복잡한 조건을 단계적으로 나눠 처리하고 싶을 때
+-- 등등
+
+-- where 안에 있는 subquery
+
+SELECT jikwonjik FROM jikwon WHERE jikwonname ='이미라'; -- 대리
+SELECT * FROM jikwon WHERE jikwonjik = '대리';
+
+SELECT * FROM jikwon
+WHERE jikwonjik = (SELECT jikwonjik FROM jikwon WHERE jikwonname = '이미라');
+
+-- 직급이 대리 중에서 가장 먼저 입사한 직원
+SELECT * FROM jikwon
+WHERE jikwonjik = '대리'AND 
+jikwonibsail = (SELECT MIN(jikwonibsail) FROM jikwon WHERE jikwonjik = '대리'); -- 문제에서 요구하는 것과 내가 출력한게 똑같은 말인가 생각하기
+
+-- 인천에 근무하는 직원 출력
+SELECT * FROM jikwon
+WHERE busernum=(SELECT buserno FROM buser WHERE buserloc = '인천');
+
+-- 인천 이외에 근무하는 직원 출력
+SELECT * FROM jikwon
+WHERE busernum IN (SELECT buserno FROM buser WHERE NOT buserloc = '인천'); -- or 여러개 ==> IN(a,b,c,..)
+
+
+SELECT * FROM jikwon
+WHERE busernum <> (SELECT buserno FROM buser WHERE buserloc = '인천'); -- <> <====== 부정문자
+
+
+-- 고객
+SELECT * FROM gogek
+WHERE SUBSTR(gogekjumin,1,2)=
+(SELECT SUBSTR(gogekjumin,1,2) FROM gogek WHERE gogekname='차일호');
 
