@@ -796,3 +796,55 @@ SELECT * FROM gogek
 WHERE SUBSTR(gogekjumin,1,2)=
 (SELECT SUBSTR(gogekjumin,1,2) FROM gogek WHERE gogekname='차일호');
 
+
+
+# SubQeury 연습문제
+# 문1) 2010년 이후 입사한 남자 중 급여를 가장 많이 받는 직원은?
+SELECT * FROM jikwon
+WHERE jikwongen = '남' AND jikwonibsail > '2010-01-01' AND 
+jikwonpay = (SELECT MAX(jikwonpay) FROM jikwon WHERE jikwonibsail > '2010-01-01' 
+AND jikwongen = '남');
+
+# 문2) '이미라' 직원의 입사 이후에 입사한 직원은?
+SELECT * FROM jikwon
+WHERE jikwonibsail > (SELECT jikwonibsail FROM jikwon WHERE jikwonname = '이미라');
+
+# 문3) 평균급여보다 급여를 많이 받는 직원은?
+SELECT * FROM jikwon
+WHERE jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon);
+
+# 문4) 2010 ~ 2015년 사이에 입사한 총무부(10), 영업부(20), 전산부(30) 직원 중 급여가 가장 적은 사람은?
+SELECT * FROM jikwon
+WHERE jikwonibsail BETWEEN '2010-01-01' AND '2015-12-31' AND
+busernum IN (10, 20, 30) AND 
+jikwonpay = (SELECT MIN(jikwonpay) FROM jikwon 
+WHERE jikwonibsail BETWEEN '2010-01-01' AND '2015-12-31' AND
+busernum IN (10, 20, 30));
+
+# 문5) 한송이, 이순신과 직급이 같은 사람은 누구인가?
+SELECT * FROM jikwon
+WHERE jikwonjik IN (SELECT jikwonjik FROM jikwon WHERE jikwonname IN('한송이', '이순신'))
+AND jikwonname NOT IN('한송이', '이순신');
+
+# 문6) 과장 중에서 최대급여, 최소급여를 받는 사람은?
+SELECT * FROM jikwon 
+WHERE jikwonjik = '과장' AND 
+jikwonpay IN ((SELECT MAX(jikwonpay) FROM jikwon WHERE jikwonjik = '과장'),
+(SELECT MIN(jikwonpay) FROM jikwon WHERE jikwonjik = '과장')); 
+
+# 문7) 10번 부서의 최소급여보다 많은 사람은?
+SELECT * FROM jikwon
+WHERE busernum = 10 AND jikwonpay > (SELECT MIN(jikwonpay) FROM jikwon WHERE busernum = 10);
+
+# 문8) 30번 부서의 평균급여보다 많은 '대리'는 몇명인가?
+SELECT COUNT(jikwonjik) AS 대리인원수 FROM jikwon
+WHERE jikwonjik = '대리' AND
+jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon WHERE busernum = 30);
+
+# 문9) 고객을 확보하고 있는 직원들의 이름, 직급, 부서명을 입사일 별로 출력하라
+SELECT DISTINCT jikwonname AS 직원이름, jikwonjik AS 직급, busername AS 부서명, jikwonibsail AS 입사일 FROM jikwon 
+LEFT JOIN buser ON busernum = buserno
+INNER JOIN gogek ON jikwonno = gogekdamsano
+ORDER BY jikwonibsail ASC;
+
+# 문제10)
