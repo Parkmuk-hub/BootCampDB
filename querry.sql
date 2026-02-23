@@ -964,3 +964,192 @@ SELECT jikwonno, jikwonname, jikwonpay FROM jikwon
 WHERE jikwonpay >any (SELECT jikwonpay FROM jikwon
 WHERE busernum = 30);
 
+-- exists 연산자
+-- 직원이 있는 부서 출력
+SELECT busername, buserloc FROM buser bu
+WHERE EXISTS (SELECT 'imsi' FROM jikwon 
+WHERE jikwon.busernum = bu.buserno); -- EXISTS (값) <== TURE 값 반환
+
+-- 직원이 없는 부서 출력
+SELECT busername, buserloc FROM buser bu
+WHERE NOT EXISTS (SELECT 'imsi' FROM jikwon 
+WHERE jikwon.busernum = bu.buserno); -- NOT EXISTS (값) <== FALSE 값 반환
+
+-- from 절에 사용하는 subquery
+-- 전체 평균 연봉과 최대 연봉 사이의 연봉을 받는 직원 출력
+SELECT jikwonno, jikwonname, jikwonpay 
+FROM jikwon a, (SELECT AVG(jikwonpay) avgs, MAX(jikwonpay) maxs FROM jikwon) b
+WHERE a.jikwonpay BETWEEN b.avgs AND b.maxs;
+
+-- group by의 having 절에 포함된 subquery
+-- 부서별 평균 연봉 중 30번 부서의 평균 연봉보다 큰 부서 출력
+SELECT busernum, AVG(jikwonpay) FROM jikwon
+GROUP BY busernum
+HAVING AVG(jikwonpay) > (SELECT AVG(jikwonpay) FROM jikwon WHERE busernum = 30);
+
+-- 상관 서브쿼리 : outer query의 각 행을 inner query에서 참조하여 수행하는 서브 쿼리
+-- 안쪽 질의에서 바깥쪽 질의를 참조하고, 다시 안쪽의 결과를 바깥쪽 질의에서 참조하는 형태
+-- 각 부서의 최대 연봉자는 ?
+SELECT * FROM jikwon a
+WHERE a.jikwonpay = (SELECT MAX(b.jikwonpay) FROM jikwon b WHERE a.busernum = b.busernum);
+
+-- 연봉 순위 3위 이내의 직원 출력(descending)
+SELECT a.jikwonno, a.jikwonname, a.jikwonpay FROM jikwon a
+WHERE 3 > (SELECT COUNT(*) FROM jikwon b 
+WHERE b.jikwonpay > a.jikwonpay)
+AND jikwonpay IS NOT NULL
+ORDER BY jikwonpay DESC; 
+
+-- subquery를 이용한 table 생성 및 insert 수행
+CREATE TABLE jiktab1 AS SELECT * FROM jikwon;		-- jikwon과 동일 테이블 생성. 단, pk는 제외
+DESC jiktab1;
+DESC jikwon;
+SELECT * FROM jiktab1;
+
+CREATE TABLE jiktab2 AS SELECT * FROM jikwon WHERE 1=0; -- jikwon과 동일 구조 테이블 생성
+SELECT * FROM jiktab2;
+
+DESC jiktab2;
+INSERT INTO jiktab2 SELECT * FROM jikwon WHERE jikwonjik = '과장';
+SELECT * FROM jikwon;
+
+INSERT INTO jiktab2(jikwonno, jikwonname, busernum) SELECT jikwonno, jikwonname, busernum
+FROM jikwon WHERE jikwonjik = '대리';
+SELECT * FROM jiktab2;
+
+-- update + subquery
+SELECT * FROM jiktab1;
+UPDATE jiktab1 SET jikwonjik = (SELECT jikwonjik FROM jikwon WHERE jikwonname = ' 이순신')
+where jikwonno = 2 ;
+
+-- delete + subquery
+DELETE FROM jiktab1 WHERE jikwonno IN (SELECT DISTINCT gogekdamsano FROM gogek);
+SELECT * FROM jiktab1;
+
+
+-- 트랜잭션 : DB의 상태를 변경시키는 논리적인 작업 단위 
+-- 트랜잭션의 4가지 특징 : ACID
+-- insert, update, delete 시 트랜잭션 시작
+-- commit, rollback으로 트랜잭션 시작
+-- 서버종료, 타임아웃 등이 발생해도 트랜잭션 종료
+SHOW VARIABLES LIKE 'autocommit%';  -- autocommit 설정 확인
+SET autocommit = TRUE;  	-- autocommit 설정
+SET atuocommit = FALSE;		-- autocommit 해제
+
+-- 트랜잭션 연습
+CREATE TABLE jiktab3 AS SELECT * FROM jikwon;	-- 연습용 TABLE
+SELECT * FROM jiktab3;
+SET autocommit = FALSE; 
+-- autocommit을 끄면 여기서만 모든 실행이 진행되고 외부 mariadb 프롬프트에선 실행안됨? => 임시저장
+
+-- 연습1
+DELETE FROM jiktab3 WHERE jikwonno = 2; -- 트랜잭션 시작
+SELECT * FROM jiktab3;
+# ROLLBACK; 	-- 트랜잭션 종료(DB 서버와 관련없이 해당 컴에서만 진행) [원래 형태로 돌아옴]
+COMMIT; 			-- 트랜잭션 종료(DB 서버에 현재 컴(클라이언트)의 내용을 근거로 원본 갱신) [실제 DB에 반영]
+SELECT * FROM jiktab3;
+SET autocommit = TRUE;
+
+-- 연습2 : savepoint(저장용)를 이용해 부분적인 트랜잭션 처리 가능
+SET autocommit = FALSE;
+SELECT * FROM jiktab3 WHERE jikwonno = 4;
+UPDATE jiktab3 SET jikwonpay = 7777 WHERE jikwonno = 4; -- 트랜잭션 시작
+SAVEPOINT a;
+UPDATE jiktab3 SET jikwonpay = 8888 WHERE jikwonno = 5;
+SELECT * FROM jiktab3 WHERE jikwonno = 5;
+ROLLBACK TO SAVEPOINT a;		-- 부분 작업 취소 : -- 트랜잭션 종료 아님
+SELECT * FROM jiktab3 WHERE jikwonno <= 6;
+ROLLBACK;		-- 전체 작업 취소 : -- 트랜잭션 종료
+SELECT * FROM jiktab3 WHERE jikwonno <= 6;
+
+UPDATE jiktab3 SET jikwonpay = 9999 WHERE jikwonno = 5; -- 트랜잭션 시작
+COMMIT;		-- 트랜잭션 종료 <== 다른 컴퓨터에도 변경
+SET autocommit = TRUE;
+SHOW VARIABLES LIKE 'autocommit%';
+
+-- 교착상태(deadlock) : 두 개 이상의 트랜잭션이 서로 상대방이 가진 락을 
+-- 기다리면서 영원히 진행하지 못하는 상태
+-- 해결책은 트랜잭션을 수행완료 또는 취소하면 된다.
+-- 일관성 유지가 중요
+SET autocommit = FALSE;
+SELECT * FROM jiktab3 WHERE jikwonno = 7;
+UPDATE jiktab3 SET jikwonpay = 1234 WHERE jikwonno = 7;		-- 트랜잭션 시작
+SELECT * FROM jiktab3 WHERE jikwonno = 7;
+COMMIT; 		-- 트랜잭션 종료
+SET autocommit = TRUE;
+-- 위에 상황정리...
+
+
+
+-- view 파일___________________________________________
+-- 물리적인 테이블을 근거로 select 문(조건 포함)을 파일로 저장하여, 가상의 테이블로 사용한다.
+-- 물리적인 테이블이 아니므로 메모리 소모가 거의 없음.
+-- 복잡하고 긴 쿼리문을 단순화 가능, 보안 강화, 자료의 독립성 확보
+-- 형식 : create or replace view 뷰파일명 as select 문
+--				alter view 뷰파일명 ~
+--				drop view 뷰파일명
+SELECT * FROM jikwon;
+SELECT jikwonno, jikwonname, jikwonpay FROM jikwon
+WHERE jikwonibsail < '2010-12-31';
+
+
+CREATE OR REPLACE VIEW v_a AS
+SELECT jikwonno, jikwonname, jikwonpay FROM jikwon
+WHERE jikwonibsail < '2010-12-31';
+
+SHOW TABLES;
+SELECT * FROM v_a;
+DESC v_a;
+
+SHOW FULL TABLES IN test WHERE table_type LIKE 'VIEW';		-- view file 목록 확인
+SELECT SUM(jikwonpay) AS 연봉합 FROM v_a;
+
+CREATE VIEW v_b AS SELECT * FROM jikwon
+WHERE jikwonname LIKE '김%' OR jikwonname LIKE '이%'
+OR jikwonname LIKE '박%';
+
+SELECT * FROM v_b;
+
+SELECT jikwonno, jikwonname, jikwonpay FROM v_b 
+WHERE jikwonjik = '사원';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
