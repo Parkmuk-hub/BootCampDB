@@ -847,4 +847,14 @@ LEFT JOIN buser ON busernum = buserno
 INNER JOIN gogek ON jikwonno = gogekdamsano
 ORDER BY jikwonibsail ASC;
 
-# 문제10)
+# 문제10)  이순신과 같은 부서에 근무하는 직원과 해당 직원이 관리하는 고객 출력
+# (고객은 나이가 30 이하면 '청년', 50 이하면 '중년', 그 외는 '노년'으로 표시하고, 고객 연장자 부터 출력)
+SELECT jikwonname AS 직원이름, busernum AS 부서, gogekname AS 고객이름,
+case 
+when (YEAR(CURDATE()) - (1900 + LEFT(gogekjumin, 2)) + 1) <= 30 then '청년'
+when (YEAR(CURDATE()) - (1900 + LEFT(gogekjumin, 2)) + 1) <= 50 then '중년'
+ELSE '노년' 
+END AS '고객분류' FROM jikwon
+INNER JOIN gogek ON jikwonno = gogekdamsano
+WHERE busernum = (SELECT busernum FROM jikwon WHERE jikwonname = '이순신')
+ORDER BY gogekjumin ASC;
