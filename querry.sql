@@ -1113,43 +1113,76 @@ SELECT * FROM v_b;
 SELECT jikwonno, jikwonname, jikwonpay FROM v_b 
 WHERE jikwonjik = '사원';
 
+ALTER TABLE jikwon RENAME kbs;
+SELECT * FROM v_b;		-- err
+ALTER TABLE kbs RENAME jikwon;
+SELECT * FROM v_b;		-- success
+
+CREATE VIEW v_c AS SELECT * FROM jikwon ORDER BY jikwonpay DESC;
+SELECT * FROM v_c;
+
+CREATE VIEW v_d AS SELECT jikwonno, jikwonname, jikwonpay * 10000 AS ypay from jikwon;
+SELECT * FROM v_d;
+
+CREATE VIEW v_e AS SELECT jikwonname, ypay from v_d WHERE ypay >= 50000000;
+SELECT * FROM v_e;
+
+UPDATE v_e SET jikwonname = '된장국' WHERE jikwonname = '김부만';
+SELECT * FROM v_e;
+SELECT * FROM v_d;
+SELECT * FROM jikwon; -- <== view 파일 수정하면 원본 테이블이 수정됨
+
+DELETE FROM v_d WHERE jikwonname = '최미숙';
+SELECT * FROM v_d;		-- v_d view file 수정하니 jikwon 테이블도 수정됨.
+SELECT * FROM jikwon; 
+
+DELETE FROM v_d WHERE ypay = 41000000;		--  계산에 의한 열도 조건에 참여 가능
+SELECT * FROM v_d;
+SELECT * FROM jikwon;
+
+SELECT * FROM v_d;
+UPDATE v_d SET ypay = 1111 WHERE jikwonname='홍길동';		-- err : 원본 테이블에 ypay가 존재하지 않음 = 수정 불가
+
+CREATE OR REPLACE view v_e AS 
+SELECT jikwonno, jikwonname, busernum, jikwonpay FROM jikwon;
+-- jikwonno, jikwonname <== NULL을 허용하지않는 친구라 무조건 써야함
+
+SELECT * FROM v_e;
+INSERT INTO v_e VALUES(31, '김밥', 20, 5000);		-- view의 insert는 원본의 NOT NULL 주의
+SELECT * FROM v_e; -- <== 수정내용 jikwon 테이블에도 수정됨.
+
+DESC jikwon;
+
+CREATE OR REPLACE VIEW v_f AS
+SELECT jikwonno, jikwonname, busernum, jikwonpay, jikwonibsail FROM jikwon
+WHERE jikwonibsail < '2015-01-01';
+
+SELECT * FROM v_f;
+
+INSERT INTO v_f VALUES(32, '공기밥', 10, 6000, '2014-05-06');
+INSERT INTO v_f VALUES(33, '주먹밥', 10, 7000, '2025-05-07');		-- <== jikwon 테이블에는 들어갔지만 v_f 파일에는 2015년 이하만 나옴
+SELECT * FROM v_f;
+SELECT * FROM jikwon;
 
 
+CREATE VIEW v_group AS
+SELECT jikwonjik, SUM(jikwonpay) AS hap, AVG(jikwonpay) AS ave
+FROM jikwon GROUP BY jikwonjik;
 
+SELECT * FROM v_group;		-- group by 에 의한 view 는 참조만 가능(insert, update, delete X)
 
+CREATE OR REPLACE VIEW v_join AS
+SELECT jikwonno, jikwonname, busername, jikwonjik FROM jikwon
+INNER JOIN buser ON jikwon.busernum = buser.buserno
+WHERE jikwon.busernum IN (10,20);
 
+SELECT * FROM v_join;
 
+UPDATE v_join SET jikwonname = '손오공' WHERE jikwonname = '박명화';		-- <== 원본 바뀜
+SELECT * FROM v_join;
 
+UPDATE v_join SET jikwonname = '사오정', busername = '영업부' WHERE jikwonname = '손오공';
+-- err : join에 의한 view는 한번에 한 개의 테이블만 수정에 참여해야함.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+DELETE FROM v_join WHERE jikwonname = '손오공';
+-- err : join을 하고 있다면  내용 삭제 불가, Oracle은 가능함.
