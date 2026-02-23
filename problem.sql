@@ -235,12 +235,13 @@ SELECT * FROM jikwon
 WHERE jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon);
 
 # 문4) 2010 ~ 2015년 사이에 입사한 총무부(10), 영업부(20), 전산부(30) 직원 중 급여가 가장 적은 사람은?
+# 직급이 NULL인 자료는 작업에서 제외
 SELECT * FROM jikwon
 WHERE jikwonibsail BETWEEN '2010-01-01' AND '2015-12-31' AND
 busernum IN (10, 20, 30) AND 
 jikwonpay = (SELECT MIN(jikwonpay) FROM jikwon 
 WHERE jikwonibsail BETWEEN '2010-01-01' AND '2015-12-31' AND
-busernum IN (10, 20, 30));
+busernum IN (10, 20, 30)) AND jikwonjik IS NOT NULL ;
 
 # 문5) 한송이, 이순신과 직급이 같은 사람은 누구인가?
 SELECT * FROM jikwon
@@ -266,7 +267,8 @@ jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon WHERE busernum = 30);
 SELECT DISTINCT jikwonname AS 직원이름, jikwonjik AS 직급, busername AS 부서명, jikwonibsail AS 입사일 FROM jikwon 
 LEFT JOIN buser ON busernum = buserno
 INNER JOIN gogek ON jikwonno = gogekdamsano
-ORDER BY jikwonibsail ASC;
+WHERE jikwonno IN (SELECT gogekdamsano FROM gogek) ORDER BY jikwonibsail ASC ;
+
 
 # 문제10)  이순신과 같은 부서에 근무하는 직원과 해당 직원이 관리하는 고객 출력
 # (고객은 나이가 30 이하면 '청년', 50 이하면 '중년', 그 외는 '노년'으로 표시하고, 고객 연장자 부터 출력)

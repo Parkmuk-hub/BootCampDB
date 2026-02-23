@@ -800,20 +800,38 @@ WHERE SUBSTR(gogekjumin,1,2)=
 
 # SubQeury 연습문제
 # 문1) 2010년 이후 입사한 남자 중 급여를 가장 많이 받는 직원은?
+-- 나
 SELECT * FROM jikwon
 WHERE jikwongen = '남' AND jikwonibsail > '2010-01-01' AND 
 jikwonpay = (SELECT MAX(jikwonpay) FROM jikwon WHERE jikwonibsail > '2010-01-01' 
 AND jikwongen = '남');
 
-# 문2) '이미라' 직원의 입사 이후에 입사한 직원은?
+-- 다른사람
 SELECT * FROM jikwon
-WHERE jikwonibsail > (SELECT jikwonibsail FROM jikwon WHERE jikwonname = '이미라');
+WHERE jikwongen = '남' AND jikwonpay = (SELECT MAX(jikwonpay) FROM jikwon
+WHERE jikwongen = '남' AND SUBSTR(jikwonibsail,1,4) >= 2010);
+
+# 문2) '이미라' 직원의 입사 이후에 입사한 직원은?
+-- 나
+SELECT * FROM jikwon WHERE jikwonibsail > (SELECT jikwonibsail FROM jikwon 
+WHERE jikwonname = '이미라');
+
+-- 다른사람
+SELECT * FROM jikwon WHERE jikwonibsail > (SELECT jikwonibsail FROM jikwon 
+WHERE jikwonname = '이미라') ORDER BY jikwonibsail;
 
 # 문3) 평균급여보다 급여를 많이 받는 직원은?
+-- 나
 SELECT * FROM jikwon
 WHERE jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon);
 
+-- 다른사람
+SELECT * FROM jikwon 
+WHERE jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon);
+
 # 문4) 2010 ~ 2015년 사이에 입사한 총무부(10), 영업부(20), 전산부(30) 직원 중 급여가 가장 적은 사람은?
+# 직급이 NULL인 사람 제외
+-- 나
 SELECT * FROM jikwon
 WHERE jikwonibsail BETWEEN '2010-01-01' AND '2015-12-31' AND
 busernum IN (10, 20, 30) AND 
@@ -821,34 +839,72 @@ jikwonpay = (SELECT MIN(jikwonpay) FROM jikwon
 WHERE jikwonibsail BETWEEN '2010-01-01' AND '2015-12-31' AND
 busernum IN (10, 20, 30));
 
+-- 다른사람
+SELECT * FROM jikwon WHERE jikwonpay = (SELECT MIN(jikwonpay) FROM jikwon 
+WHERE busernum IN (10, 20, 30)); 
+-- 2010 ~ 2015년 사이 아님
+
 # 문5) 한송이, 이순신과 직급이 같은 사람은 누구인가?
+-- 나
 SELECT * FROM jikwon
-WHERE jikwonjik IN (SELECT jikwonjik FROM jikwon WHERE jikwonname IN('한송이', '이순신'))
-AND jikwonname NOT IN('한송이', '이순신');
+WHERE jikwonjik IN (SELECT jikwonjik FROM jikwon WHERE jikwonname IN('한송이', '이순신'));
+-- AND jikwonname NOT IN('한송이', '이순신'); <== 이순신, 한송이 제외
+
+-- 다른사람
+SELECT * FROM jikwon WHERE jikwonjik IN (SELECT jikwonjik FROM jikwon 
+WHERE jikwonname = '한송이' OR jikwonname = '이순신') 
+ORDER BY jikwonjik;
 
 # 문6) 과장 중에서 최대급여, 최소급여를 받는 사람은?
+-- 나
 SELECT * FROM jikwon 
 WHERE jikwonjik = '과장' AND 
 jikwonpay IN ((SELECT MAX(jikwonpay) FROM jikwon WHERE jikwonjik = '과장'),
 (SELECT MIN(jikwonpay) FROM jikwon WHERE jikwonjik = '과장')); 
 
+-- 다른사람
+SELECT * FROM jikwon 
+WHERE jikwonjik = '과장' AND 
+jikwonpay IN ((SELECT MAX(jikwonpay) FROM jikwon WHERE jikwonjik = '과장'),
+(SELECT min(jikwonpay) FROM jikwon WHERE jikwonjik = '과장'));
+ 
 # 문7) 10번 부서의 최소급여보다 많은 사람은?
+-- 나
 SELECT * FROM jikwon
 WHERE busernum = 10 AND jikwonpay > (SELECT MIN(jikwonpay) FROM jikwon WHERE busernum = 10);
 
+-- 다른사람
+SELECT * FROM jikwon 
+WHERE jikwonpay > (SELECT MIN(jikwonpay) FROM jikwon WHERE busernum = 10); 
+-- 10번 부서만 나오지않음
+
 # 문8) 30번 부서의 평균급여보다 많은 '대리'는 몇명인가?
+-- 나
 SELECT COUNT(jikwonjik) AS 대리인원수 FROM jikwon
 WHERE jikwonjik = '대리' AND
 jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon WHERE busernum = 30);
 
+-- 다른사람
+SELECT COUNT(jikwonno) FROM jikwon 
+WHERE jikwonjik = '대리' AND 
+jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon WHERE busernum = 30);
+
 # 문9) 고객을 확보하고 있는 직원들의 이름, 직급, 부서명을 입사일 별로 출력하라
+-- 나
 SELECT DISTINCT jikwonname AS 직원이름, jikwonjik AS 직급, busername AS 부서명, jikwonibsail AS 입사일 FROM jikwon 
 LEFT JOIN buser ON busernum = buserno
 INNER JOIN gogek ON jikwonno = gogekdamsano
 ORDER BY jikwonibsail ASC;
 
+-- 다른사람
+SELECT jikwonname AS 직원명, jikwonjik AS 직급, busername AS 부서명, jikwonibsail AS 입사일FROM jikwon 
+LEFT OUTER JOIN buser ON busernum = buserno 
+INNER JOIN gogek ON jikwonno = gogekdamsano
+WHERE jikwonno IN (SELECT DISTINCT gogekdamsano FROM gogek) ORDER BY jikwonibsail;
+
 # 문제10)  이순신과 같은 부서에 근무하는 직원과 해당 직원이 관리하는 고객 출력
 # (고객은 나이가 30 이하면 '청년', 50 이하면 '중년', 그 외는 '노년'으로 표시하고, 고객 연장자 부터 출력)
+-- 나
 SELECT jikwonname AS 직원이름, busernum AS 부서, gogekname AS 고객이름,
 case 
 when (YEAR(CURDATE()) - (1900 + LEFT(gogekjumin, 2)) + 1) <= 30 then '청년'
@@ -857,4 +913,54 @@ ELSE '노년'
 END AS '고객분류' FROM jikwon
 INNER JOIN gogek ON jikwonno = gogekdamsano
 WHERE busernum = (SELECT busernum FROM jikwon WHERE jikwonname = '이순신')
-ORDER BY gogekjumin ASC;
+ORDER BY gogekjumin ASC; 
+
+-- 다른사람
+SELECT jikwonname AS 직원명, busername AS 부서명, busertel AS 부서전화, jikwonjik AS 직급, gogekname AS 고객명, gogektel AS 고객전화, 
+case 
+when (2026- (1900 + SUBSTR(gogekjumin, 1, 2))) <= 30 then '청년' 
+when (2026- (1900 + SUBSTR(gogekjumin, 1, 2))) <= 50 then '중년' 
+when (2026- (1900 + SUBSTR(gogekjumin, 1, 2))) > 50 then '노년' 
+ELSE '없음' 
+END AS '고객구분' FROM jikwon 
+LEFT OUTER JOIN buser ON busernum = buserno 
+LEFT OUTER JOIN gogek ON jikwonno = gogekdamsano 
+WHERE busernum = (SELECT busernum FROM jikwon WHERE jikwonname = '이순신') 
+ORDER BY (2026- (1900 + SUBSTR(gogekjumin, 1, 2))) DESC;
+
+-- 쿼리문은 동일한 결과를 여러 방법으로 수행 가능
+-- 총무부에 근무하는 직원들이 관리하는 고객 출력
+
+-- subquery 사용
+SELECT gogekno AS 고객번호, gogekname AS 고객이름, gogektel AS 고객번호 FROM gogek
+WHERE gogekdamsano IN (SELECT jikwonno FROM jikwon
+WHERE busernum =(SELECT buserno FROM buser
+WHERE busername = '총무부'));
+
+-- join 사용
+SELECT gogekno AS 고객번호, gogekname AS 고객이름, gogektel AS 고객번호 FROM gogek
+INNER JOIN jikwon ON jikwonno = gogekdamsano
+INNER JOIN buser ON busernum = buserno
+WHERE busername = '총무부';
+
+-- any, all 연산자 : NULL 인 자료는 기본적으로 제외하고 작업한다.
+-- <any : subquery의 반환 값 중 최대 값보다 작은~			<= 도 가능
+-- >any : subquery의 반환 값 중 최소 값보다 큰~
+-- <all : subquery의 반환 값 중 최소 값보다 작은~
+-- >all : subquery의 반환 값 중 최대 값보다 큰~
+
+-- '대리'의 최대 값보다 작은 연봉을 받는 직원은?
+SELECT jikwonno, jikwonname, jikwonpay FROM jikwon
+WHERE jikwonpay <ANY (SELECT jikwonpay FROM jikwon
+WHERE jikwonjik = '대리');
+
+-- 30번 부서의 최고 연봉자보다 연봉을 많이 받는 직원은?
+SELECT jikwonno, jikwonname, jikwonpay FROM jikwon
+WHERE jikwonpay >all (SELECT jikwonpay FROM jikwon
+WHERE busernum = 30);
+
+-- 30번 부서의 최저 연봉자보다 연봉을 많이 받는 직원은?
+SELECT jikwonno, jikwonname, jikwonpay FROM jikwon
+WHERE jikwonpay >any (SELECT jikwonpay FROM jikwon
+WHERE busernum = 30);
+
