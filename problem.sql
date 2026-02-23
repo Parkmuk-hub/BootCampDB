@@ -303,3 +303,87 @@ ORDER BY gogekjumin ASC;
 #LEFT OUTER JOIN: 왼쪽 테이블의 모든 데이터를 가져옵니다. 오른쪽 테이블에 짝이 없으면 NULL로 채웁니다.
 #RIGHT OUTER JOIN: 오른쪽 테이블의 모든 데이터를 가져옵니다. 왼쪽 테이블에 짝이 없으면 NULL로 채웁니다.
 #FULL OUTER JOIN: 왼쪽, 오른쪽 가리지 않고 일단 양쪽 데이터를 전부 다 가져옵니다. 짝이 있으면 합치고, 없으면 없는 대로 NULL을 넣어 보여줍니다.
+
+
+
+-- 문항7) buser 테이블에서 buserno(부서번호)가 3인 데이터(레코드)를 삭제하는 SQL 구문을 작성하시오.
+
+DELETE FROM buser WHERE buserno = 3;
+
+--  문항9) jikwon 테이블과 buser 테이블을 이용하여 직급이 '과장'인 직원만 조회하는 query문을 작성하시오.
+-- 조건 : join 사용
+--  jikwonno  jikwonname  busername  jikwonjik
+--     3         이순신     영업부     과장
+
+SELECT jikwonno, jikwonname, busername, jikwonjik FROM jikwon
+INNER JOIN buser ON busernum = buserno
+WHERE jikwonjik = '과장';
+
+-- [문항11] jikwon 테이블에서 연봉이 5000 이상이고 7000 이하인 직원을 검색하여 직원번호, 직원명, 연봉을 출력하는 SQL문을 
+-- 두 가지 방법(and, between)으로 작성하시오.
+
+SELECT jikwonno AS 직원번호, jikwonname AS 직원명, jikwonpay AS 연봉 FROM jikwon
+WHERE jikwonpay >= 5000 AND jikwonpay <= 7000;
+
+SELECT jikwonno AS 직원번호, jikwonname AS 직원명, jikwonpay AS 연봉 FROM jikwon
+WHERE jikwonpay BETWEEN 5000 AND 7000;
+
+
+-- [문항12] jikwon 테이블을 사용하여 평균 연봉보다 연봉이 높은 직원들을 모두 출력하는 select 문(sub query)을 작성하시오. 
+-- 칼럼은 모두 출력.
+SELECT * FROM jikwon
+WHERE jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon);
+
+-- [문항13] 아래 두 개의 ERD를 보고 테이블 생성을 위한 DDL문을 MariaDB 형식에 맞게 작성하시오.
+-- customers          ----------        orders
+-- ==================================
+-- pk  cno  : 정수                            pk  ono : 정수 
+-- ---------------------------------------------------------
+--     cname : 고정문자(10)          odate : 날짜시간
+--     caddress : 가변문자(50)      oaddress : 가변문자(50)
+--     cemail  : 고정문자(20)        ophone : 가변문자(20)
+--     cphone : 가변문자(20)        ostatus : 가변문자(10)
+--                                             ono_cus : fk
+-- ==================================
+
+CREATE TABLE customers(cno INT PRIMARY KEY, cname CHAR(10), caddress VARCHAR(50), cemail CHAR(20), cphone VARCHAR(20));
+
+CREATE TABLE orders(ono INT PRIMARY KEY, odate DATETIME DEFAULT CURRENT_TIMESTAMP, oaddress VARCHAR(10), 
+ophone VARCHAR(20), ostatus VARCHAR(10), ono_cus INT, FOREIGN KEY(ono_cus) REFERENCES customers(cno));
+
+-- [문항14] jikwon 테이블을 사용하기로 한다.
+-- 2015 ~ 2020 년 사이에 입사한 직원을 대상으로 년도별 인원수와 연봉평균을 출력하는 DML문을 기술하시오.
+SELECT DATE_FORMAT(jikwonibsail, '%Y') AS 년도, COUNT(*) AS 인원수, AVG(jikwonpay) AS 연봉평균 FROM jikwon
+WHERE jikwonibsail BETWEEN '2015-01-01' AND '2020-12-31'
+GROUP BY DATE_FORMAT(jikwonibsail, '%Y')
+
+
+-- [문항15] jikwon, gogek 테이블을 사용해 '평균 급여보다 급여가 높은 직원과 
+-- 그 직원이 담당하는 고객 수'를 조회하는 select 문을 작성하시오.
+-- 직원명  급여  고객수
+-- 홍길동  9900    1
+
+SELECT jikwonname AS 직원명, jikwonpay AS 급여, COUNT(*) AS 고객수 FROM jikwon
+LEFT OUTER JOIN gogek ON jikwonno = gogekdamsano
+WHERE jikwonpay > (SELECT AVG(jikwonpay) FROM jikwon)
+GROUP BY jikwonname
+DESC;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
